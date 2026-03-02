@@ -1,13 +1,13 @@
 from flask import Flask, request, jsonify
 import requests
 import json
+import os
 
+# 初始化Flask应用（必须命名为app，Vercel会识别这个变量）
 app = Flask(__name__)
 
 # -------------------------- 配置项（需要你替换） --------------------------
-# 1. 前往豆包官网获取API Key：https://www.doubao.com/developer
 4530cfdb-9dae-429c-9f0b-8595595e7fa3
-# 2. 豆包API接口地址（无需修改）
 DOUBAO_API_URL = "https://api.doubao.com/v1/chat/completions"
 # ------------------------------------------------------------------------
 
@@ -45,33 +45,32 @@ def generate_resume():
         }
 
         payload = {
-            "model": "doubao-pro",  # 豆包专业版模型，也可使用doubao-lite（轻量版）
-            "messages": [
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.7,  # 生成多样性，0-1之间，越低越严谨
-            "max_tokens": 2000   # 最大生成字数
+            "model": "doubao-pro",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.7,
+            "max_tokens": 2000
         }
 
         response = requests.post(DOUBAO_API_URL, headers=headers, data=json.dumps(payload))
-        response.raise_for_status()  # 抛出HTTP请求异常
+        response.raise_for_status()
         result = response.json()
-
-        # 提取生成的简历内容
         resume_content = result['choices'][0]['message']['content']
 
-        return jsonify({
-            "resume": resume_content
-        })
+        return jsonify({"resume": resume_content})
 
     except requests.exceptions.RequestException as e:
         return jsonify({"error": f"API调用失败：{str(e)}"}), 500
     except Exception as e:
         return jsonify({"error": f"系统错误：{str(e)}"}), 500
 
-# Vercel适配（必须保留，否则部署后无法运行）
+# -------------------------- Vercel核心适配（必须保留） --------------------------
+# 方法1：暴露wsgi_app（Vercel优先识别这个）
+app.wsgi_app = app.wsgi_app
+
+# 方法2：定义handler函数（兼容Vercel的WSGI规范）
 def handler(event, context):
     return app(event, context)
 
+# 本地运行入口（不影响Vercel部署）
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
