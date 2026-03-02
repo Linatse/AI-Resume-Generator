@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI简历生成器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+        }
+        body {
+            background-color: #f0f8f0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+        }
+        h1 {
+            color: #2e7d32;
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        .input-group {
+            margin-bottom: 25px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2e7d32;
+            font-weight: 500;
+            font-size: 16px;
+        }
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #c8e6c9;
+            border-radius: 8px;
+            resize: vertical;
+            min-height: 150px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #66bb6a;
+            box-shadow: 0 0 0 2px rgba(102, 187, 106, 0.2);
+        }
+        #btn-generate {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            display: block;
+            margin: 0 auto 30px;
+            transition: background-color 0.3s;
+        }
+        #btn-generate:hover {
+            background-color: #388e3c;
+        }
+        #btn-download {
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            margin: 0 auto;
+            display: none;
+        }
+        #btn-download:hover {
+            background-color: #1b5e20;
+        }
+        .output-group {
+            margin-top: 30px;
+        }
+        #resume-output {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid #c8e6c9;
+            border-radius: 8px;
+            min-height: 300px;
+            background: #fafafa;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+        .loading {
+            text-align: center;
+            color: #4caf50;
+            display: none;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI简历生成器</h1>
+        
+        <div class="input-group">
+            <label for="personal-info">个人背景信息（基本信息、职场经历、工作内容、获奖情况等）：</label>
+            <textarea id="personal-info" placeholder="例如：
+姓名：张三
+年龄：28
+学历：本科（计算机科学与技术）
+工作经历：2020-至今 某科技公司 后端开发工程师
+工作内容：负责公司核心业务系统的后端开发，参与3个大型项目，优化接口性能提升30%
+获奖情况：2022年公司优秀员工、2023年技术创新奖..."></textarea>
+        </div>
+
+        <div class="input-group">
+            <label for="job-requirement">招聘需求内容（岗位名称、任职要求、岗位职责等）：</label>
+            <textarea id="job-requirement" placeholder="例如：
+岗位名称：后端开发工程师
+任职要求：
+1. 本科及以上学历，计算机相关专业
+2. 3年以上Python/Java开发经验
+3. 熟悉Flask/Django框架，有高并发项目经验
+4. 具备良好的代码规范和问题排查能力
+岗位职责：
+1. 负责后端接口开发与维护
+2. 参与技术方案设计和性能优化..."></textarea>
+        </div>
+
+        <button id="btn-generate">生成简历</button>
+        <div class="loading" id="loading">正在生成简历，请稍候...</div>
+        
+        <div class="output-group">
+            <label for="resume-output">生成的简历内容：</label>
+            <div id="resume-output"></div>
+            <button id="btn-download" onclick="downloadResume()">下载Word版简历</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.15/docxtemplater.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.4/pizzip.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.4/pizzip-utils.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/file-saver/2.0.5/FileSaver.min.js"></script>
+    <script>
+        // 生成简历
+        async function generateResume() {
+            const personalInfo = document.getElementById('personal-info').value.trim();
+            const jobRequirement = document.getElementById('job-requirement').value.trim();
+            
+            // 校验输入
+            if (!personalInfo || !jobRequirement) {
+                alert('请完整填写个人背景和招聘需求！');
+                return;
+            }
+
+            // 显示加载状态
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('btn-generate').disabled = true;
+            document.getElementById('btn-download').style.display = 'none';
+
+            try {
+                // 调用后端接口
+                const response = await fetch('/api/generate-resume', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        personal_info: personalInfo,
+                        job_requirement: jobRequirement
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
+
+                // 显示简历内容
+                document.getElementById('resume-output').textContent = result.resume;
+                // 显示下载按钮
+                document.getElementById('btn-download').style.display = 'block';
+
+            } catch (error) {
+                document.getElementById('resume-output').textContent = `生成失败：${error.message}`;
+            } finally {
+                // 隐藏加载状态
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('btn-generate').disabled = false;
+            }
+        }
+
+        // 下载Word简历
+        function downloadResume() {
+            const resumeContent = document.getElementById('resume-output').textContent;
+            if (!resumeContent) return;
+
+            // 创建Word文档
+            const zip = new PizZip();
+            const content = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                <w:body>
+                    <w:p>${resumeContent.replace(/\n/g, '</w:p><w:p>')}</w:p>
+                </w:body>
+            </w:document>`;
+            
+            zip.file('word/document.xml', content);
+            const out = zip.generate({
+                type: 'blob',
+                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            });
+
+            // 下载文件
+            saveAs(out, 'AI生成简历.docx');
+        }
+
+        // 绑定按钮点击事件
+        document.getElementById('btn-generate').addEventListener('click', generateResume);
+    </script>
+</body>
+</html>
