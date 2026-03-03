@@ -3,10 +3,10 @@ import requests
 import json
 import os
 
-# 初始化Flask应用（必须命名为app，Vercel会识别这个变量）
+# 初始化Flask应用
 app = Flask(__name__)
 
-# -------------------------- 配置项（需要你替换） --------------------------
+# -------------------------- 配置项（替换成你的API Key） --------------------------
 4530cfdb-9dae-429c-9f0b-8595595e7fa3
 DOUBAO_API_URL = "https://api.doubao.com/v1/chat/completions"
 # ------------------------------------------------------------------------
@@ -63,14 +63,9 @@ def generate_resume():
     except Exception as e:
         return jsonify({"error": f"系统错误：{str(e)}"}), 500
 
-# -------------------------- Vercel核心适配（必须保留） --------------------------
-# 方法1：暴露wsgi_app（Vercel优先识别这个）
-app.wsgi_app = app.wsgi_app
+# Vercel原生适配（无需vercel-wsgi）
+application = app  # Vercel会自动识别application变量作为WSGI入口
 
-# 方法2：定义handler函数（兼容Vercel的WSGI规范）
-def handler(event, context):
-    return app(event, context)
-
-# 本地运行入口（不影响Vercel部署）
+# 本地运行入口
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
